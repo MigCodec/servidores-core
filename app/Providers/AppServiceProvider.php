@@ -6,6 +6,7 @@ use App\Support\Database\SqliteDriveSynchronizer;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +23,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(SqliteDriveSynchronizer $synchronizer): void
     {
+        if (config('app.env') === 'production') {
+            URL::forceScheme('https');
+        }
         if (! config('services.google_drive.sync_on_boot')) {
             return;
         }
