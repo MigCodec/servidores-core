@@ -264,10 +264,14 @@
         <div class="nav-wrapper">
             <div class="brand">{{ config('app.name', 'Servidores Core') }}</div>
             <nav class="nav-links">
+                <a href="{{ route('dashboard.index') }}" class="{{ request()->routeIs('dashboard.*') ? 'active' : '' }}">Dashboard</a>
                 <a href="{{ route('servers.index') }}" class="{{ request()->routeIs('servers.*') ? 'active' : '' }}">Servidores</a>
                 @can('viewAny', App\Models\Group::class)
                     <a href="{{ route('groups.index') }}" class="{{ request()->routeIs('groups.*') ? 'active' : '' }}">Grupos</a>
                 @endcan
+                @if (auth()->user()->isAdmin())
+                    <a href="{{ route('admin.google-drive.index') }}" class="{{ request()->routeIs('admin.google-drive.*') ? 'active' : '' }}">Google Drive</a>
+                @endif
             </nav>
             <div class="user-menu">
                 <span>{{ auth()->user()->name }}</span>

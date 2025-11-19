@@ -4,24 +4,26 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Service extends Model
+class ServerHealthLog extends Model
 {
     use HasFactory;
-    use SoftDeletes;
 
     protected $fillable = [
         'server_id',
-        'name',
-        'url',
-        'port',
-        'username',
-        'password',
+        'status',
+        'latency_ms',
+        'ssh_connected',
+        'ram_usage_percent',
+        'cpu_load1',
+        'services_status',
     ];
 
     protected $casts = [
-        'password' => 'encrypted',
+        'ssh_connected' => 'boolean',
+        'ram_usage_percent' => 'float',
+        'cpu_load1' => 'float',
+        'services_status' => 'array',
     ];
 
     public function server()

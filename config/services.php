@@ -41,4 +41,12 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL').'/auth/google/callback'),
     ],
 
+    'google_drive' => [
+        'credentials' => env('GOOGLE_DRIVE_CREDENTIALS'),
+        'folder_id' => env('GOOGLE_DRIVE_FOLDER_ID'),
+        'refresh_token' => env('GOOGLE_DRIVE_REFRESH_TOKEN'),
+        'master_file_id' => env('GOOGLE_DRIVE_MASTER_FILE_ID'),
+        'sync_on_boot' => env('GOOGLE_DRIVE_SYNC_ON_BOOT', false),
+    ],
+
 ];

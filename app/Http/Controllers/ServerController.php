@@ -179,10 +179,27 @@ class ServerController extends Controller
                 'integer',
                 Rule::exists('groups', 'id')->where('is_admin', false),
             ],
+            'ssh_host' => ['nullable', 'string', 'max:255'],
+            'ssh_port' => ['nullable', 'integer', 'between:1,65535'],
+            'ssh_username' => ['nullable', 'string', 'max:255'],
+            'ssh_password' => ['nullable', 'string', 'max:255'],
+            'os_name' => ['nullable', 'string', 'max:255'],
+            'os_version' => ['nullable', 'string', 'max:255'],
+            'kernel_version' => ['nullable', 'string', 'max:255'],
+            'cpu_cores' => ['nullable', 'integer', 'between:1,128'],
+            'owner' => ['nullable', 'string', 'max:255'],
+            'environment' => ['nullable', 'string', 'max:255'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'critical_services' => ['nullable', 'string'],
         ]);
 
         $data['is_physical'] = (bool) $data['is_physical'];
         $data['parent_id'] = $data['is_physical'] ? null : ($data['parent_id'] ?? null);
+        $data['ssh_host'] = $data['ssh_host'] ?: null;
+        $data['ssh_port'] = $data['ssh_port'] ?? null;
+        $data['ssh_username'] = $data['ssh_username'] ?: null;
+        $data['ssh_password'] = $data['ssh_password'] ?: null;
+        $data['critical_services'] = $this->normalizeCriticalServices($data['critical_services'] ?? null);
 
         return $data;
     }
@@ -198,5 +215,20 @@ class ServerController extends Controller
             ->all();
 
         $server->groups()->sync($groupIds);
+    }
+
+    protected function normalizeCriticalServices(?string $value): ?array
+    {
+        if (! $value) {
+            return null;
+        }
+
+        $list = collect(preg_split("/\r?\n/", $value))
+            ->map(fn ($item) => trim($item))
+            ->filter()
+            ->values()
+            ->all();
+
+        return $list === [] ? null : $list;
     }
 }
