@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\GoogleDriveController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GroupController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\ServiceController;
 use Illuminate\Support\Facades\Route;
@@ -34,4 +35,7 @@ Route::middleware('auth')->group(function () {
         ->only(['create', 'store', 'edit', 'update', 'destroy']);
 
     Route::resource('groups', GroupController::class)->only(['index', 'create', 'store', 'edit', 'update']);
+
+    Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
 });

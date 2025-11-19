@@ -331,6 +331,7 @@
             </nav>
             <div class="user-menu">
                 <span>{{ auth()->user()->name }}</span>
+                <a href="{{ route('profile.edit') }}" style="color:#d1d5db;text-decoration:none;font-size:0.85rem;">Perfil</a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit">Salir</button>
