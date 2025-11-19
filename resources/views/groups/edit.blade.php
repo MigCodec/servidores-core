@@ -3,6 +3,7 @@
 @section('title', 'Editar grupo')
 
 @section('content')
+    @php $isProtected = $isProtected ?? false; @endphp
     <div class="card">
         <h2 class="section-title">Configurar grupo</h2>
 
@@ -21,16 +22,16 @@
             <div class="form-grid">
                 <div>
                     <label for="name">Nombre</label>
-                    <input type="text" id="name" name="name" value="{{ old('name', $group->name) }}" required>
+                    <input type="text" id="name" name="name" value="{{ old('name', $group->name) }}" {{ $isProtected ? 'readonly' : 'required' }}>
                 </div>
                 <div>
                     <label for="slug">Slug</label>
-                    <input type="text" id="slug" name="slug" value="{{ old('slug', $group->slug) }}" required>
+                    <input type="text" id="slug" name="slug" value="{{ old('slug', $group->slug) }}" {{ $isProtected ? 'readonly' : 'required' }}>
                 </div>
                 <div>
                     <label>&nbsp;</label>
                     <div class="checkbox-row">
-                        <input type="checkbox" id="is_admin" name="is_admin" value="1" {{ old('is_admin', $group->is_admin) ? 'checked' : '' }} {{ $group->is_admin ? 'disabled' : '' }}>
+                        <input type="checkbox" id="is_admin" name="is_admin" value="1" {{ old('is_admin', $group->is_admin) ? 'checked' : '' }} {{ $group->is_admin || $isProtected ? 'disabled' : '' }}>
                         <label for="is_admin">Grupo de administracion</label>
                     </div>
                     <div class="muted">Los administradores pueden ver y modificar todo.</div>

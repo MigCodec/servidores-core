@@ -94,6 +94,7 @@ class ServerController extends Controller
             'virtualMachines',
             'services' => fn ($query) => $query->orderBy('name'),
             'groups',
+            'healthLogs' => fn ($query) => $query->latest()->limit(20),
         ]);
 
         $groups = $server->groups()->where('is_admin', false)->get();
@@ -191,6 +192,7 @@ class ServerController extends Controller
             'environment' => ['nullable', 'string', 'max:255'],
             'location' => ['nullable', 'string', 'max:255'],
             'critical_services' => ['nullable', 'string'],
+            'in_maintenance' => ['nullable', 'boolean'],
         ]);
 
         $data['is_physical'] = (bool) $data['is_physical'];
@@ -200,6 +202,7 @@ class ServerController extends Controller
         $data['ssh_username'] = $data['ssh_username'] ?: null;
         $data['ssh_password'] = $data['ssh_password'] ?: null;
         $data['critical_services'] = $this->normalizeCriticalServices($data['critical_services'] ?? null);
+        $data['in_maintenance'] = $request->boolean('in_maintenance');
 
         return $data;
     }

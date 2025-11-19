@@ -19,16 +19,11 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $servers = $this->visibleServers($request->user())->with('groups')->orderBy('name')->get();
-
-        $data = Cache::get('server-health');
-
-        if (! $data || $this->isStale($data, $servers)) {
-            $data = $this->health->refresh($servers);
-            Cache::put('server-health', $data, now()->addMinutes(5));
-        }
-
+        $data = Cache::get('server-health', ['generated_at' => null, 'records' => []]);
         $records = $data['records'] ?? [];
-        $generatedAt = isset($data['generated_at']) ? \Illuminate\Support\Carbon::parse($data['generated_at']) : null;
+        $generatedAt = isset($data['generated_at']) && $data['generated_at']
+            ? \Illuminate\Support\Carbon::parse($data['generated_at'])
+            : null;
 
         return view('dashboard.index', [
             'servers' => $servers,
@@ -49,6 +44,32 @@ class DashboardController extends Controller
         return redirect()
             ->route('dashboard.index')
             ->with('status', 'Dashboard actualizado.');
+    }
+
+    public function refreshServer(Request $request, Server $server)
+    {
+        $this->authorize('view', $server);
+
+        $result = $this->health->inspect($server);
+        $cache = Cache::get('server-health', ['generated_at' => null, 'records' => []]);
+        $cache['records'][$server->id] = $result;
+        $cache['generated_at'] = now()->toIso8601String();
+        Cache::put('server-health', $cache, now()->addMinutes(5));
+
+        $log = $server->healthLogs()->latest()->first();
+
+        return response()->json([
+            'server_id' => $server->id,
+            'result' => $result,
+            'log' => $log ? [
+                'status' => $log->status,
+                'latency_ms' => $log->latency_ms,
+                'ram_usage_percent' => $log->ram_usage_percent,
+                'cpu_load1' => $log->cpu_load1,
+                'services_status' => $log->services_status,
+                'created_at' => $log->created_at->toIso8601String(),
+            ] : null,
+        ]);
     }
 
     protected function visibleServers(Authenticatable $user)
@@ -76,6 +97,9 @@ class DashboardController extends Controller
         ];
 
         foreach ($servers as $server) {
+            if ($server->in_maintenance) {
+                continue;
+            }
             $status = $records[$server->id]['status'] ?? 'unknown';
             $isUp = $status === 'up';
             $category = $server->is_physical ? 'physical' : 'virtual';

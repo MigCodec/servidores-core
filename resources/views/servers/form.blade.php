@@ -1,4 +1,4 @@
-@php
+﻿@php
     $physicalServers = $physicalServers ?? collect();
     $groups = $groups ?? collect();
 @endphp
@@ -81,6 +81,14 @@
     </div>
 @endif
 
+<div style="margin-top: 1rem;">
+    <div class="checkbox-row">
+        <input type="checkbox" id="in_maintenance" name="in_maintenance" value="1" {{ old('in_maintenance', $server->in_maintenance) ? 'checked' : '' }}>
+        <label for="in_maintenance">Modo mantenimiento</label>
+    </div>
+    <div class="muted">Mientras esté en mantenimiento no se revisará su estado en el dashboard.</div>
+</div>
+
 <div style="margin-top: 1.5rem;">
     <h3 style="margin: 0 0 0.75rem; font-size: 1rem;">Inventario</h3>
     <div class="form-grid">
@@ -92,7 +100,7 @@
             @enderror
         </div>
         <div>
-            <label for="os_version">Versión SO</label>
+            <label for="os_version">VersiÃ³n SO</label>
             <input type="text" id="os_version" name="os_version" value="{{ old('os_version', $server->os_version) }}">
             @error('os_version')
                 <div class="muted">{{ $message }}</div>
@@ -106,14 +114,14 @@
             @enderror
         </div>
         <div>
-            <label for="cpu_cores">Núcleos CPU</label>
+            <label for="cpu_cores">NÃºcleos CPU</label>
             <input type="number" id="cpu_cores" name="cpu_cores" min="1" max="128" value="{{ old('cpu_cores', $server->cpu_cores) }}">
             @error('cpu_cores')
                 <div class="muted">{{ $message }}</div>
             @enderror
         </div>
         <div>
-            <label for="owner">Responsable / Dueño</label>
+            <label for="owner">Responsable / DueÃ±o</label>
             <input type="text" id="owner" name="owner" value="{{ old('owner', $server->owner) }}">
             @error('owner')
                 <div class="muted">{{ $message }}</div>
@@ -121,14 +129,14 @@
         </div>
         <div>
             <label for="environment">Ambiente</label>
-            <input type="text" id="environment" name="environment" value="{{ old('environment', $server->environment) }}" placeholder="Producción, QA, etc.">
+            <input type="text" id="environment" name="environment" value="{{ old('environment', $server->environment) }}" placeholder="ProducciÃ³n, QA, etc.">
             @error('environment')
                 <div class="muted">{{ $message }}</div>
             @enderror
         </div>
         <div>
-            <label for="location">Ubicación</label>
-            <input type="text" id="location" name="location" value="{{ old('location', $server->location) }}" placeholder="Rack / DataCenter / Región">
+            <label for="location">UbicaciÃ³n</label>
+            <input type="text" id="location" name="location" value="{{ old('location', $server->location) }}" placeholder="Rack / DataCenter / RegiÃ³n">
             @error('location')
                 <div class="muted">{{ $message }}</div>
             @enderror
@@ -138,11 +146,11 @@
 
 <div style="margin-top: 1.5rem;">
     <h3 style="margin: 0 0 0.75rem; font-size: 1rem;">Acceso SSH (opcional)</h3>
-    <p class="muted" style="margin-top: 0; margin-bottom: 1rem;">Si completas estos datos, el dashboard podrá consultar métricas básicas vía SSH.</p>
+    <p class="muted" style="margin-top: 0; margin-bottom: 1rem;">Si completas estos datos, el dashboard podrÃ¡ consultar mÃ©tricas bÃ¡sicas vÃ­a SSH.</p>
     <div class="form-grid">
         <div>
             <label for="ssh_host">Host SSH</label>
-            <input type="text" id="ssh_host" name="ssh_host" value="{{ old('ssh_host', $server->ssh_host) }}" placeholder="Usará la IP si se deja vacío">
+            <input type="text" id="ssh_host" name="ssh_host" value="{{ old('ssh_host', $server->ssh_host) }}" placeholder="UsarÃ¡ la IP si se deja vacÃ­o">
             @error('ssh_host')
                 <div class="muted">{{ $message }}</div>
             @enderror
@@ -165,7 +173,7 @@
         </div>
 
         <div>
-            <label for="ssh_password">Contraseña</label>
+            <label for="ssh_password">ContraseÃ±a</label>
             <input type="password" id="ssh_password" name="ssh_password" value="{{ old('ssh_password') }}">
             @error('ssh_password')
                 <div class="muted">{{ $message }}</div>
@@ -175,8 +183,8 @@
 </div>
 
 <div style="margin-top: 1.5rem;">
-    <h3 style="margin: 0 0 0.75rem; font-size: 1rem;">Servicios críticos</h3>
-    <p class="muted" style="margin-top: 0; margin-bottom: 1rem;">Opcional: ingresa un servicio por línea, se verificará con <code>systemctl is-active</code>.</p>
+    <h3 style="margin: 0 0 0.75rem; font-size: 1rem;">Servicios crÃ­ticos</h3>
+    <p class="muted" style="margin-top: 0; margin-bottom: 1rem;">Opcional: ingresa un servicio por lÃ­nea, se verificarÃ¡ con <code>systemctl is-active</code>.</p>
     <textarea name="critical_services" id="critical_services" rows="4" placeholder="nginx&#10;mysql">{{ old('critical_services', collect($server->critical_services ?? [])->implode("\n")) }}</textarea>
     @error('critical_services')
         <div class="muted">{{ $message }}</div>
@@ -200,3 +208,4 @@
         toggleParent();
     </script>
 @endpush
+

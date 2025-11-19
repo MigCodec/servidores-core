@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', config('app.name', 'Servidores Core'))</title>
     <style>
         :root {
@@ -256,10 +257,65 @@
                 justify-content: space-between;
             }
         }
+
+        .toast-container {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            z-index: 9999;
+        }
+
+        .toast {
+            min-width: 240px;
+            max-width: 320px;
+            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            color: #111827;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 4.5s forwards;
+            font-size: 0.95rem;
+        }
+
+        .toast-success {
+            background: #dcfce7;
+            border-left: 4px solid #16a34a;
+        }
+
+        .toast-error {
+            background: #fee2e2;
+            border-left: 4px solid #b91c1c;
+        }
+
+        .toast-info {
+            background: #dbeafe;
+            border-left: 4px solid #2563eb;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateX(40px);
+            }
+        }
     </style>
     @stack('styles')
 </head>
 <body>
+    <div class="toast-container" id="toast-container"></div>
     <header>
         <div class="nav-wrapper">
             <div class="brand">{{ config('app.name', 'Servidores Core') }}</div>
@@ -283,12 +339,37 @@
         </div>
     </header>
     <main>
-        @if (session('status'))
-            <div class="alert alert-success">{{ session('status') }}</div>
-        @endif
-
         @yield('content')
     </main>
     @stack('scripts')
+    <script>
+        (function () {
+            const container = document.getElementById('toast-container');
+
+            function showToast(message, type = 'info') {
+                if (!message) return;
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                toast.textContent = message;
+                container.appendChild(toast);
+                setTimeout(() => toast.remove(), 5000);
+            }
+
+            window.showToast = showToast;
+
+            const messages = [];
+            @if (session('status'))
+                messages.push({ text: "{{ addslashes(session('status')) }}", type: 'success' });
+            @endif
+            @if (session('error'))
+                messages.push({ text: "{{ addslashes(session('error')) }}", type: 'error' });
+            @endif
+            @if ($errors->any())
+                messages.push({ text: "{{ addslashes($errors->first()) }}", type: 'error' });
+            @endif
+
+            messages.forEach(({ text, type }) => showToast(text, type));
+        })();
+    </script>
 </body>
 </html>

@@ -9,6 +9,9 @@
                 <h2 class="section-title">Grupos de acceso</h2>
                 <p class="muted">Asigna servidores a los ayudantes mediante grupos.</p>
             </div>
+            <div>
+                <a class="btn btn-primary" href="{{ route('groups.create') }}">Nuevo grupo</a>
+            </div>
         </div>
 
         @if ($groups->isEmpty())

@@ -73,6 +73,17 @@
             background: #fff7f7;
         }
 
+        .server-card.loading {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+            opacity: 0.85;
+        }
+
+        .server-card.loading .status-pill {
+            background: #e5e7eb !important;
+            color: #374151 !important;
+        }
+
         .server-card-header {
             display: flex;
             justify-content: space-between;
@@ -107,6 +118,34 @@
             font-size: 0.85rem;
             color: #6b7280;
         }
+
+        .loading-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .loading-indicator::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #93c5fd;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 @endpush
 
@@ -118,28 +157,25 @@
                 <p class="muted" style="margin: 0;">Última actualización:
                     {{ $generatedAt ? $generatedAt->diffForHumans() : 'sin datos' }}</p>
             </div>
-            <form method="POST" action="{{ route('dashboard.refresh') }}">
-                @csrf
-                <button class="btn btn-primary" type="submit">Actualizar ahora</button>
-            </form>
+            <button class="btn btn-primary" type="button" id="refresh-dashboard">Actualizar ahora</button>
         </div>
 
         <div class="stat-grid">
             <div class="stat-card stat-up">
                 <div class="stat-label">Físicos en línea</div>
-                <div class="stat-value">{{ $summary['physical']['up'] }}</div>
+                <div class="stat-value" data-summary="physical-up">{{ $summary['physical']['up'] }}</div>
             </div>
             <div class="stat-card stat-down">
                 <div class="stat-label">Físicos sin respuesta</div>
-                <div class="stat-value">{{ $summary['physical']['down'] }}</div>
+                <div class="stat-value" data-summary="physical-down">{{ $summary['physical']['down'] }}</div>
             </div>
             <div class="stat-card stat-up">
                 <div class="stat-label">Virtuales en línea</div>
-                <div class="stat-value">{{ $summary['virtual']['up'] }}</div>
+                <div class="stat-value" data-summary="virtual-up">{{ $summary['virtual']['up'] }}</div>
             </div>
             <div class="stat-card stat-down">
                 <div class="stat-label">Virtuales sin respuesta</div>
-                <div class="stat-value">{{ $summary['virtual']['down'] }}</div>
+                <div class="stat-value" data-summary="virtual-down">{{ $summary['virtual']['down'] }}</div>
             </div>
         </div>
     </div>
@@ -152,12 +188,17 @@
                     $data = $health[$server->id] ?? null;
                     $isUp = ($data['status'] ?? 'down') === 'up';
                     $ssh = $data['ssh'] ?? null;
-                @endphp
-                @php
                     $logs = ($history->get($server->id) ?? collect())->take(5);
                     $servicesStatus = $ssh['services'] ?? ($logs->first()->services_status ?? null);
+                    $isMaintenance = $server->in_maintenance;
                 @endphp
-                <div class="server-card {{ $isUp ? 'status-up' : 'status-down' }}">
+                <div class="server-card {{ $isMaintenance ? 'status-maintenance' : ($isUp ? 'status-up' : 'status-down') }}"
+                    data-server-id="{{ $server->id }}"
+                    data-server-type="{{ $server->is_physical ? 'physical' : 'virtual' }}"
+                    data-server-name="{{ $server->name }}"
+                    data-health-url="{{ route('dashboard.server-health', $server) }}"
+                    data-current-status="{{ $isMaintenance ? 'maintenance' : ($isUp ? 'up' : 'down') }}"
+                    data-maintenance="{{ $isMaintenance ? '1' : '0' }}">
                     <div class="server-card-header">
                         <div>
                             <strong>{{ $server->name }}</strong>
@@ -165,23 +206,26 @@
                                 {{ $server->ip_address }} · {{ $server->is_physical ? 'Físico' : 'Virtual' }}
                             </div>
                             <div class="muted" style="font-size: 0.8rem;">
-                                {{ $server->environment ?? 'Ambiente N/D' }} · {{ $server->location ?? 'Ubicación N/D' }} · Responsable: {{ $server->owner ?? 'N/D' }}
+                                {{ $server->environment ?? 'Ambiente N/D' }} · {{ $server->location ?? 'Ubicación N/D' }}
+                                · Responsable: {{ $server->owner ?? 'N/D' }}
                             </div>
                             <div class="muted" style="font-size: 0.75rem;">
-                                {{ $server->os_name ?? 'SO N/D' }} {{ $server->os_version }} {{ $server->kernel_version ? '· Kernel '.$server->kernel_version : '' }} {{ $server->cpu_cores ? '· '.$server->cpu_cores.' cores' : '' }}
+                                {{ $server->os_name ?? 'SO N/D' }} {{ $server->os_version }}
+                                {{ $server->kernel_version ? '· Kernel '.$server->kernel_version : '' }}
+                                {{ $server->cpu_cores ? '· '.$server->cpu_cores.' cores' : '' }}
                             </div>
                         </div>
-                        <span class="status-pill {{ $isUp ? 'up' : 'down' }}">
-                            {{ $isUp ? 'Encendido' : 'Apagado' }}
+                        <span class="status-pill {{ $isMaintenance ? 'down' : ($isUp ? 'up' : 'down') }} js-status-pill">
+                            <span class="js-status-text">{{ $isMaintenance ? 'Mantenimiento' : ($isUp ? 'Encendido' : 'Apagado') }}</span>
                         </span>
                     </div>
-                    <div class="metric-row">
+                    <div class="metric-row js-latency-row">
                         <span>Latencia</span>
-                        <span>{{ $data && $data['latency_ms'] ? $data['latency_ms'] . ' ms' : 'Sin datos' }}</span>
+                        <span class="js-latency">{{ $data && $data['latency_ms'] ? $data['latency_ms'].' ms' : 'Sin datos' }}</span>
                     </div>
-                    <div class="metric-row">
+                    <div class="metric-row js-ram-row">
                         <span>RAM</span>
-                        <span>
+                        <span class="js-ram">
                             @if ($ssh && $ssh['connected'] && $ssh['ram'])
                                 {{ $ssh['ram']['used_mb'] }} / {{ $ssh['ram']['total_mb'] }} MB
                                 ({{ $ssh['ram']['usage_percent'] }}%)
@@ -190,9 +234,9 @@
                             @endif
                         </span>
                     </div>
-                    <div class="metric-row">
+                    <div class="metric-row js-cpu-row">
                         <span>CPU (load)</span>
-                        <span>
+                        <span class="js-cpu">
                             @if ($ssh && $ssh['connected'] && $ssh['cpu'])
                                 {{ $ssh['cpu']['load1'] }}, {{ $ssh['cpu']['load5'] }}, {{ $ssh['cpu']['load15'] }}
                             @else
@@ -200,37 +244,43 @@
                             @endif
                         </span>
                     </div>
-                    @if ($ssh && $ssh['error'] && ! $ssh['connected'])
-                        <div class="ssh-status">{{ $ssh['error'] }}</div>
-                    @endif
-                    @if ($servicesStatus)
-                        <div>
-                            <strong style="font-size: 0.85rem;">Servicios críticos</strong>
-                            <ul style="margin: 0.35rem 0 0; padding-left: 1rem; font-size: 0.85rem;">
-                                @foreach ($servicesStatus as $service => $status)
-                                    <li>
-                                        {{ $service }}:
-                                        <span style="font-weight: 600; color: {{ $status === 'active' ? '#166534' : '#991b1b' }};">
-                                            {{ $status }}
-                                        </span>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-                    @if ($logs->isNotEmpty())
-                        <div>
-                            <strong style="font-size: 0.85rem;">Historial reciente</strong>
-                            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem;">
-                                @foreach ($logs as $log)
+                    <div class="ssh-status js-ssh-error">
+                        @if ($ssh && $ssh['error'] && ! $ssh['connected'])
+                            {{ $ssh['error'] }}
+                        @endif
+                    </div>
+                    <div class="js-services">
+                        @if ($servicesStatus)
+                            <div>
+                                <strong style="font-size: 0.85rem;">Servicios críticos</strong>
+                                <ul style="margin: 0.35rem 0 0; padding-left: 1rem; font-size: 0.85rem;">
+                                    @foreach ($servicesStatus as $service => $status)
+                                        <li>
+                                            {{ $service }}:
+                                            <span style="font-weight: 600; color: {{ $status === 'active' ? '#166534' : '#991b1b' }};">
+                                                {{ $status }}
+                                            </span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                    </div>
+                    <div>
+                        <strong style="font-size: 0.85rem;">Historial reciente</strong>
+                        <div class="js-history" style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem;">
+                            @if ($logs->isNotEmpty())
+                                @foreach ($logs->take(4) as $log)
                                     @php $up = $log->status === 'up'; @endphp
-                                    <span class="status-pill {{ $up ? 'up' : 'down' }}" style="font-size: 0.75rem;">
+                                    <span class="status-pill {{ $up ? 'up' : ($log->status === 'maintenance' ? 'down' : 'down') }}" style="font-size: 0.75rem;">
                                         {{ $log->created_at->diffForHumans(null, null, true) }}
                                     </span>
                                 @endforeach
-                            </div>
+                            @else
+                                <span class="muted" style="font-size: 0.8rem;">Sin datos</span>
+                            @endif
                         </div>
-                    @endif
+                    </div>
                 </div>
             @empty
                 <p class="muted">No hay servidores disponibles.</p>
@@ -238,3 +288,179 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = Array.from(document.querySelectorAll('.server-card[data-server-id]'));
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+            const summaryEls = {
+                physical: {
+                    up: document.querySelector('[data-summary="physical-up"]'),
+                    down: document.querySelector('[data-summary="physical-down"]'),
+                },
+                virtual: {
+                    up: document.querySelector('[data-summary="virtual-up"]'),
+                    down: document.querySelector('[data-summary="virtual-down"]'),
+                },
+            };
+
+            function updateSummary(card, newStatus) {
+                const type = card.dataset.serverType;
+                const prev = card.dataset.currentStatus;
+                if (!summaryEls[type]) {
+                    return;
+                }
+                if (prev && summaryEls[type][prev] && (prev === 'up' || prev === 'down')) {
+                    summaryEls[type][prev].textContent = Math.max(0, Number(summaryEls[type][prev].textContent) - 1);
+                }
+                card.dataset.currentStatus = newStatus;
+                if (summaryEls[type][newStatus] && (newStatus === 'up' || newStatus === 'down')) {
+                    summaryEls[type][newStatus].textContent = Number(summaryEls[type][newStatus].textContent) + 1;
+                }
+            }
+
+            function renderServices(container, services) {
+                container.innerHTML = '';
+                if (!services || Object.keys(services).length === 0) {
+                    return;
+                }
+                const wrapper = document.createElement('div');
+                wrapper.innerHTML = '<strong style="font-size: 0.85rem;">Servicios críticos</strong>';
+                const list = document.createElement('ul');
+                list.style.margin = '0.35rem 0 0';
+                list.style.paddingLeft = '1rem';
+                list.style.fontSize = '0.85rem';
+                Object.entries(services).forEach(([service, status]) => {
+                    const li = document.createElement('li');
+                    const span = document.createElement('span');
+                    span.style.fontWeight = '600';
+                    span.style.color = status === 'active' ? '#166534' : '#991b1b';
+                    span.textContent = status;
+                    li.textContent = `${service}: `;
+                    li.appendChild(span);
+                    list.appendChild(li);
+                });
+                wrapper.appendChild(list);
+                container.appendChild(wrapper);
+            }
+
+            function renderHistory(container, log) {
+                if (!log || !container) {
+                    return;
+                }
+                while (container.firstElementChild && container.firstElementChild.classList.contains('muted')) {
+                    container.removeChild(container.firstElementChild);
+                }
+                const pill = document.createElement('span');
+                const statusClass = log.status === 'up' ? 'up' : (log.status === 'maintenance' ? 'down' : 'down');
+                pill.className = `status-pill ${statusClass}`;
+                pill.style.fontSize = '0.75rem';
+                const date = new Date(log.created_at);
+                pill.textContent = date.toLocaleTimeString();
+                container.prepend(pill);
+                if (container.children.length > 4) {
+                    container.lastElementChild.remove();
+                }
+            }
+
+            function updateCard(card, data) {
+                card.classList.remove('loading');
+                const result = data.result;
+                const statusPill = card.querySelector('.js-status-pill');
+                statusPill.classList.remove('up', 'down');
+                statusPill.classList.add(result.status === 'up' ? 'up' : 'down');
+                if (result.status === 'maintenance') {
+                    card.querySelector('.js-status-text').textContent = 'Mantenimiento';
+                } else if (result.status === 'up') {
+                    card.querySelector('.js-status-text').textContent = 'Encendido';
+                } else {
+                    card.querySelector('.js-status-text').textContent = 'Apagado';
+                }
+                card.classList.toggle('status-up', result.status === 'up');
+                card.classList.toggle('status-down', result.status === 'down');
+                card.classList.toggle('status-maintenance', result.status === 'maintenance');
+                card.dataset.currentStatus = result.status;
+                card.dataset.maintenance = result.status === 'maintenance' ? '1' : '0';
+                card.querySelector('.js-latency').textContent = result.latency_ms ? `${result.latency_ms} ms` : 'Sin datos';
+
+                if (result.ssh && result.ssh.connected && result.ssh.ram) {
+                    card.querySelector('.js-ram').textContent = `${result.ssh.ram.used_mb} / ${result.ssh.ram.total_mb} MB (${result.ssh.ram.usage_percent}%)`;
+                } else {
+                    card.querySelector('.js-ram').textContent = result.ssh && result.ssh.connected ? 'Sin datos' : 'Sin SSH';
+                }
+
+                if (result.ssh && result.ssh.connected && result.ssh.cpu) {
+                    card.querySelector('.js-cpu').textContent = `${result.ssh.cpu.load1}, ${result.ssh.cpu.load5}, ${result.ssh.cpu.load15}`;
+                } else {
+                    card.querySelector('.js-cpu').textContent = result.ssh && result.ssh.connected ? 'Sin datos' : 'Sin SSH';
+                }
+
+                const errorBox = card.querySelector('.js-ssh-error');
+                if (result.ssh && result.ssh.error && !result.ssh.connected) {
+                    errorBox.textContent = result.ssh.error;
+                } else {
+                    errorBox.textContent = '';
+                }
+
+                const services = result.ssh && result.ssh.services ? result.ssh.services : null;
+                renderServices(card.querySelector('.js-services'), services);
+                renderHistory(card.querySelector('.js-history'), data.log);
+                updateSummary(card, result.status === 'up' ? 'up' : 'down');
+            }
+
+            const filteredQueue = () => cards.filter(card => card.dataset.maintenance !== '1');
+            let queue = filteredQueue();
+            let active = 0;
+            const CONCURRENCY = 4;
+
+            function processQueue(reset = false) {
+                if (reset) {
+                    queue = filteredQueue();
+                    active = 0;
+                }
+                while (active < CONCURRENCY && queue.length > 0) {
+                    const card = queue.shift();
+                    if (card.dataset.maintenance === '1') {
+                        continue;
+                    }
+                    active++;
+                    card.classList.add('loading');
+                    card.querySelector('.js-status-text').textContent = 'Actualizando…';
+                    card.querySelectorAll('.js-latency, .js-ram, .js-cpu').forEach((el) => {
+                        el.innerHTML = '<span class="loading-indicator">Actualizando…</span>';
+                    });
+                    fetch(card.dataset.healthUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                    })
+                        .then((response) => {
+                            if (!response.ok) {
+                                throw new Error('No se pudo actualizar '+card.dataset.serverName);
+                            }
+                            return response.json();
+                        })
+                        .then((data) => {
+                            updateCard(card, data);
+                        })
+                        .catch((error) => {
+                            showToast(error.message, 'error');
+                        })
+                        .finally(() => {
+                            active--;
+                            processQueue();
+                        });
+                }
+            }
+
+            document.getElementById('refresh-dashboard').addEventListener('click', () => {
+                processQueue(true);
+            });
+
+            processQueue();
+        });
+    </script>
+@endpush

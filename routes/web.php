@@ -22,6 +22,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
     Route::post('dashboard/refresh', [DashboardController::class, 'refresh'])->name('dashboard.refresh');
+    Route::post('dashboard/server-health/{server}', [DashboardController::class, 'refreshServer'])
+        ->name('dashboard.server-health');
     Route::get('admin/google-drive', [GoogleDriveController::class, 'index'])->name('admin.google-drive.index');
     Route::post('admin/google-drive/connect', [GoogleDriveController::class, 'start'])->name('admin.google-drive.start');
     Route::get('admin/google-drive/callback', [GoogleDriveController::class, 'callback'])->name('admin.google-drive.callback');
@@ -31,5 +33,5 @@ Route::middleware('auth')->group(function () {
         ->shallow()
         ->only(['create', 'store', 'edit', 'update', 'destroy']);
 
-    Route::resource('groups', GroupController::class)->only(['index', 'edit', 'update']);
+    Route::resource('groups', GroupController::class)->only(['index', 'create', 'store', 'edit', 'update']);
 });

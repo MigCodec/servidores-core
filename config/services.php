@@ -49,4 +49,8 @@ return [
         'sync_on_boot' => env('GOOGLE_DRIVE_SYNC_ON_BOOT', false),
     ],
 
+    'groups' => [
+        'default_guest_slug' => env('GROUP_DEFAULT_GUEST_SLUG', 'invitados'),
+    ],
+
 ];

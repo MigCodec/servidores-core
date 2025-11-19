@@ -25,14 +25,61 @@ class GroupController extends Controller
         ]);
     }
 
+    public function create()
+    {
+        $this->authorize('create', Group::class);
+
+        return view('groups.create', [
+            'group' => new Group(),
+            'users' => User::orderBy('name')->get(),
+            'servers' => Server::orderBy('name')->get(),
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $this->authorize('create', Group::class);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255', 'unique:groups,slug'],
+            'is_admin' => ['nullable', 'boolean'],
+            'user_ids' => ['nullable', 'array'],
+            'user_ids.*' => ['integer', Rule::exists('users', 'id')],
+            'server_ids' => ['nullable', 'array'],
+            'server_ids.*' => ['integer', Rule::exists('servers', 'id')],
+        ]);
+
+        $group = new Group();
+        $group->name = $data['name'];
+        $group->slug = $data['slug'] ?? Str::slug($data['name']);
+        $group->is_admin = $request->boolean('is_admin');
+        $group->save();
+
+        $group->users()->sync($data['user_ids'] ?? []);
+
+        if ($group->is_admin) {
+            $group->servers()->sync([]);
+        } else {
+            $group->servers()->sync($data['server_ids'] ?? []);
+        }
+
+        return redirect()
+            ->route('groups.index')
+            ->with('status', 'Grupo creado correctamente.');
+    }
+
     public function edit(Group $group)
     {
         $this->authorize('view', $group);
+
+        $isProtected = $group->slug === config('services.groups.default_guest_slug', 'invitados');
 
         return view('groups.edit', [
             'group' => $group->load(['users', 'servers']),
             'users' => User::orderBy('name')->get(),
             'servers' => Server::orderBy('name')->get(),
+            'isProtected' => $isProtected,
         ]);
     }
 

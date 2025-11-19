@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Group;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -76,6 +77,15 @@ class AuthController extends Controller
                 'password' => Str::random(32),
             ]
         );
+
+        if ($user->wasRecentlyCreated) {
+            $guestGroup = Group::firstOrCreate(
+                ['slug' => 'invitados'],
+                ['name' => 'Invitados', 'is_admin' => false]
+            );
+
+            $user->groups()->syncWithoutDetaching([$guestGroup->id]);
+        }
 
         Auth::login($user, true);
 

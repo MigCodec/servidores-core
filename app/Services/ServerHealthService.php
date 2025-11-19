@@ -27,6 +27,18 @@ class ServerHealthService
 
     public function inspect(Server $server): array
     {
+        if ($server->in_maintenance) {
+            $result = [
+                'status' => 'maintenance',
+                'latency_ms' => null,
+                'ssh' => ['connected' => false, 'error' => 'En mantenimiento'],
+            ];
+
+            $this->storeLog($server, $result);
+
+            return $result;
+        }
+
         $ping = $this->ping($server->ip_address);
 
         $ssh = null;

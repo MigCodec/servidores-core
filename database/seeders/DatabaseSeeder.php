@@ -29,7 +29,7 @@ class DatabaseSeeder extends Seeder
         );
 
         $admin = User::firstOrCreate(
-            ['email' => 'admin@demo.local'],
+            ['email' => 'servidores@disc.ucn.cl'],
             [
                 'name' => 'Administrador',
                 'password' => 'password',

@@ -30,6 +30,7 @@ class Server extends Model
         'environment',
         'location',
         'critical_services',
+        'in_maintenance',
     ];
 
     protected $casts = [
@@ -38,6 +39,7 @@ class Server extends Model
         'ssh_password' => 'encrypted',
         'cpu_cores' => 'integer',
         'critical_services' => 'array',
+        'in_maintenance' => 'boolean',
     ];
 
     public function parent()

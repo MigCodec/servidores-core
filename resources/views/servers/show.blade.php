@@ -8,6 +8,9 @@
             <div>
                 <h2 class="section-title">{{ $server->name }}</h2>
                 <p class="muted">IP {{ $server->ip_address }}</p>
+                @if ($server->in_maintenance)
+                    <span class="badge" style="background:#bfdbfe;color:#1d4ed8;">En mantenimiento</span>
+                @endif
             </div>
             <div class="actions">
                 <a class="btn btn-light" href="{{ route('servers.index') }}">Volver</a>
@@ -136,6 +139,62 @@
                             </td>
                         </tr>
                     @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
+
+    <div class="card">
+        <h3 class="section-title">Historial de disponibilidad</h3>
+        @php
+            $logs = $server->healthLogs ?? collect();
+        @endphp
+        @if ($logs->isEmpty())
+            <p class="muted">No hay registros recientes.</p>
+        @else
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Latencia</th>
+                            <th>RAM</th>
+                            <th>CPU (load1)</th>
+                            <th>Servicios críticos</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($logs as $log)
+                            <tr>
+                                <td>{{ $log->created_at->toDayDateTimeString() }}</td>
+                                <td>
+                                    <span class="status-pill {{ $log->status === 'up' ? 'up' : 'down' }}">
+                                        {{ $log->status === 'up' ? 'Encendido' : 'Apagado' }}
+                                    </span>
+                                </td>
+                                <td>{{ $log->latency_ms ? $log->latency_ms.' ms' : 'N/D' }}</td>
+                                <td>{{ $log->ram_usage_percent ? $log->ram_usage_percent.'%' : 'N/D' }}</td>
+                                <td>{{ $log->cpu_load1 ?? 'N/D' }}</td>
+                                <td>
+                                    @if ($log->services_status)
+                                        <ul style="margin: 0; padding-left: 1rem;">
+                                            @foreach ($log->services_status as $service => $status)
+                                                <li>
+                                                    {{ $service }}:
+                                                    <strong style="color: {{ $status === 'active' ? '#166534' : '#991b1b' }};">
+                                                        {{ $status }}
+                                                    </strong>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    @else
+                                        <span class="muted">N/D</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
                     </tbody>
                 </table>
             </div>
