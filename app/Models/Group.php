@@ -28,6 +28,8 @@ class Group extends Model
 
     public function servers()
     {
-        return $this->belongsToMany(Server::class)->withTimestamps();
+        return $this->belongsToMany(Server::class)
+            ->withTimestamps()
+            ->withPivot('can_view_credentials');
     }
 }

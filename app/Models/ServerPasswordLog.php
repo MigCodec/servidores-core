@@ -4,27 +4,19 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Service extends Model
+class ServerPasswordLog extends Model
 {
     use HasFactory;
-    use SoftDeletes;
 
     protected $fillable = [
         'server_id',
-        'name',
-        'host',
-        'url',
-        'port',
-        'username',
+        'recorded_by',
         'password',
-        'is_ssh',
     ];
 
     protected $casts = [
         'password' => 'encrypted',
-        'is_ssh' => 'boolean',
     ];
 
     public function server()
@@ -32,8 +24,8 @@ class Service extends Model
         return $this->belongsTo(Server::class);
     }
 
-    public function passwordLogs()
+    public function recordedBy()
     {
-        return $this->hasMany(ServicePasswordLog::class);
+        return $this->belongsTo(User::class, 'recorded_by');
     }
 }

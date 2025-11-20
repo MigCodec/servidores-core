@@ -4,11 +4,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
+
+    protected ?array $credentialServerCache = null;
 
     /**
      * The attributes that are mass assignable.
@@ -78,5 +81,41 @@ class User extends Authenticatable
         $serverIds = $this->manageableServerIds();
 
         return in_array($server->id, $serverIds, true);
+    }
+
+    public function credentialServerIds(): array
+    {
+        if ($this->isAdmin()) {
+            return [];
+        }
+
+        if ($this->credentialServerCache !== null) {
+            return $this->credentialServerCache;
+        }
+
+        $groupIds = $this->groups()->pluck('groups.id')->all();
+
+        if ($groupIds === []) {
+            return $this->credentialServerCache = [];
+        }
+
+        $ids = DB::table('group_server')
+            ->whereIn('group_id', $groupIds)
+            ->where('can_view_credentials', true)
+            ->pluck('server_id')
+            ->unique()
+            ->values()
+            ->all();
+
+        return $this->credentialServerCache = $ids;
+    }
+
+    public function canAccessServerCredentials(Server $server): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        return in_array($server->id, $this->credentialServerIds(), true);
     }
 }

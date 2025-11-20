@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Support\Database\SqliteDriveSynchronizer;
 use App\Support\EnvEditor;
 use App\Support\GoogleDrive\DriveClientFactory;
 use Illuminate\Http\Request;
@@ -78,5 +79,22 @@ class GoogleDriveController extends Controller
         return redirect()
             ->route('admin.google-drive.index')
             ->with('status', 'Refresh token actualizado correctamente.');
+    }
+
+    public function sync(Request $request, SqliteDriveSynchronizer $synchronizer)
+    {
+        $this->authorizeAdmin($request);
+
+        try {
+            $result = $synchronizer->sync(force: true);
+        } catch (\Throwable $e) {
+            return redirect()
+                ->route('admin.google-drive.index')
+                ->with('error', 'No se pudo sincronizar: '.$e->getMessage());
+        }
+
+        return redirect()
+            ->route('admin.google-drive.index')
+            ->with('status', 'Sincronización completada. Registros importados: '.$result['remote_to_local']);
     }
 }

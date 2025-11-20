@@ -27,4 +27,9 @@ class ServicePolicy
     {
         return $user->isAdmin();
     }
+
+    public function viewCredentials(User $user, Service $service): bool
+    {
+        return app(ServerPolicy::class)->viewCredentials($user, $service->server);
+    }
 }

@@ -1,9 +1,13 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 
 @section('title', 'Servidor '.$server->name)
 
 @section('content')
     <div class="card">
+        @php
+            $canViewCredentials = auth()->user()->can('viewCredentials', $server);
+            $sshService = $server->sshService;
+        @endphp
         <div style="display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
             <div>
                 <h2 class="section-title">{{ $server->name }}</h2>
@@ -56,6 +60,15 @@
             </div>
         </div>
 
+        @if ($canViewCredentials && $sshService)
+            <div style="margin-top: 1.5rem;">
+                <label>Credenciales SSH</label>
+                <div>Host: {{ optional($sshService)->host ?? $server->ip_address ?? 'N/D' }} · Puerto: {{ optional($sshService)->port ?? 22 }}</div>
+                <div>Usuario: {{ optional($sshService)->username ?? 'N/D' }}</div>
+                <div>Contraseña: {{ optional($sshService)->password ?? 'N/D' }}</div>
+            </div>
+        @endif
+
         <div style="margin-top: 1.5rem;">
             <label>Grupos con acceso</label>
             @if ($groups->isEmpty())
@@ -107,7 +120,7 @@
                         <th>URL</th>
                         <th>Puerto</th>
                         <th>Usuario</th>
-                        <th>Contrasena</th>
+                        <th>Contraseña</th>
                         <th></th>
                     </tr>
                     </thead>
@@ -122,9 +135,15 @@
                                     <span class="muted">No definida</span>
                                 @endif
                             </td>
-                            <td>{{ $service->port }}</td>
-                            <td>{{ $service->username }}</td>
-                            <td>{{ $service->password }}</td>
+                        <td>{{ $service->port }}</td>
+                        <td>{{ $service->username }}</td>
+                        <td>
+                            @if ($canViewCredentials)
+                                {{ $service->password ?? 'N/D' }}
+                            @else
+                                <span class="muted">Sin acceso</span>
+                            @endif
+                        </td>
                             <td class="actions">
                                 @can('update', $service)
                                     <a class="btn btn-secondary" href="{{ route('services.edit', $service) }}">Editar</a>
@@ -162,7 +181,7 @@
                             <th>Latencia</th>
                             <th>RAM</th>
                             <th>CPU (load1)</th>
-                            <th>Servicios críticos</th>
+                            <th>Servicios crÃ­ticos</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -200,4 +219,107 @@
             </div>
         @endif
     </div>
+
+    @if ($canViewCredentials)
+        <div class="card">
+            <h3 class="section-title">Agregar credencial al vault</h3>
+            <div class="form-grid">
+                <div>
+                    <h4>SSH</h4>
+                    <form method="POST" action="{{ route('servers.vault.store', $server) }}">
+                        @csrf
+                        <input type="hidden" name="entry_type" value="ssh">
+                        <div>
+                            <label for="ssh_host_form">Host</label>
+                            <input type="text" id="ssh_host_form" name="host" value="{{ optional($sshService)->host ?? $server->ip_address }}" required>
+                        </div>
+                        <div>
+                            <label for="ssh_port_form">Puerto</label>
+                            <input type="number" id="ssh_port_form" name="port" min="1" max="65535" value="{{ optional($sshService)->port ?? 22 }}" required>
+                        </div>
+                        <div>
+                            <label for="ssh_username_form">Usuario</label>
+                            <input type="text" id="ssh_username_form" name="username" value="{{ optional($sshService)->username }}" required>
+                        </div>
+                        <div>
+                            <label for="ssh_password_form">Contraseña</label>
+                            <input type="text" id="ssh_password_form" name="password" required>
+                        </div>
+                        <button class="btn btn-secondary" type="submit" style="margin-top:0.75rem;">Guardar en vault</button>
+                    </form>
+                </div>
+                <div>
+                    <h4>Servicio</h4>
+                    <form method="POST" action="{{ route('servers.vault.store', $server) }}">
+                        @csrf
+                        <input type="hidden" name="entry_type" value="service">
+                        @if ($server->services->isNotEmpty())
+                            <label for="existing_service_id">Servicio existente</label>
+                            <select name="service_id" id="existing_service_id">
+                                <option value="">Crear nuevo</option>
+                                @foreach ($server->services as $service)
+                                    <option value="{{ $service->id }}">{{ $service->name }}</option>
+                                @endforeach
+                            </select>
+                        @endif
+                        <div>
+                            <label for="service_name_form">Nombre</label>
+                            <input type="text" id="service_name_form" name="name" required>
+                        </div>
+                        <div>
+                            <label for="service_port_form">Puerto</label>
+                            <input type="number" id="service_port_form" name="port" min="1" max="65535" required>
+                        </div>
+                        <div>
+                            <label for="service_username_form">Usuario</label>
+                            <input type="text" id="service_username_form" name="username" required>
+                        </div>
+                        <div>
+                            <label for="service_password_form">Contraseña</label>
+                            <input type="text" id="service_password_form" name="password" required>
+                        </div>
+                        <div>
+                            <label for="service_url_form">URL (opcional)</label>
+                            <input type="url" id="service_url_form" name="url">
+                        </div>
+                        <button class="btn btn-secondary" type="submit" style="margin-top:0.75rem;">Guardar en vault</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="section-title">Vault de contraseñas</h3>
+            <div class="form-grid">
+                <div>
+                    <h4>SSH</h4>
+                    @forelse ($server->passwordLogs as $log)
+                        <div style="margin-bottom:0.35rem;">
+                            <strong>{{ $log->created_at->toDayDateTimeString() }}</strong>
+                            <div>Contraseña: {{ $log->password ?? 'N/D' }}</div>
+                            <div class="muted">Registrado por {{ optional($log->recordedBy)->name ?? 'sistema' }}</div>
+                        </div>
+                    @empty
+                        <p class="muted">Sin registros.</p>
+                    @endforelse
+                </div>
+                <div>
+                    <h4>Servicios</h4>
+                    @foreach ($server->services as $service)
+                        <div style="margin-bottom:0.75rem;">
+                            <strong>{{ $service->name }}</strong>
+                            @forelse ($service->passwordLogs->take(5) as $log)
+                                <div style="font-size:0.9rem;">
+                                    {{ $log->created_at->toDayDateTimeString() }} — {{ $log->password ?? 'N/D' }}
+                                </div>
+                            @empty
+                                <div class="muted">Sin registros.</div>
+                            @endforelse
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    @endif
 @endsection
+

@@ -18,10 +18,6 @@ class Server extends Model
         'storage_gb',
         'is_physical',
         'parent_id',
-        'ssh_host',
-        'ssh_port',
-        'ssh_username',
-        'ssh_password',
         'os_name',
         'os_version',
         'kernel_version',
@@ -35,8 +31,6 @@ class Server extends Model
 
     protected $casts = [
         'is_physical' => 'boolean',
-        'ssh_port' => 'integer',
-        'ssh_password' => 'encrypted',
         'cpu_cores' => 'integer',
         'critical_services' => 'array',
         'in_maintenance' => 'boolean',
@@ -59,11 +53,48 @@ class Server extends Model
 
     public function groups()
     {
-        return $this->belongsToMany(Group::class)->withTimestamps();
+        return $this->belongsToMany(Group::class)
+            ->withTimestamps()
+            ->withPivot('can_view_credentials');
     }
 
     public function healthLogs()
     {
         return $this->hasMany(ServerHealthLog::class);
+    }
+
+    public function passwordLogs()
+    {
+        return $this->hasMany(ServerPasswordLog::class);
+    }
+
+    public function getSshServiceAttribute()
+    {
+        if ($this->relationLoaded('services')) {
+            $service = $this->services->firstWhere('is_ssh', true);
+            if ($service) {
+                return $service;
+            }
+        } else {
+            $service = $this->services()->where('is_ssh', true)->first();
+            if ($service) {
+                return $service;
+            }
+        }
+
+        $legacyUsername = $this->getAttribute('ssh_username');
+        if ($legacyUsername) {
+            return (object) [
+                'id' => null,
+                'host' => $this->getAttribute('ssh_host') ?: $this->ip_address,
+                'port' => $this->getAttribute('ssh_port') ?: 22,
+                'username' => $legacyUsername,
+                'password' => $this->getAttribute('ssh_password'),
+                'is_ssh' => true,
+                'passwordLogs' => collect(),
+            ];
+        }
+
+        return null;
     }
 }

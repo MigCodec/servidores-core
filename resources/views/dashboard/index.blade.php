@@ -73,6 +73,11 @@
             background: #fff7f7;
         }
 
+        .server-card.status-maintenance {
+            border-color: #bfdbfe;
+            background: #eff6ff;
+        }
+
         .server-card.loading {
             background: #f3f4f6;
             border-color: #d1d5db;
@@ -221,28 +226,26 @@
                     </div>
                     <div class="metric-row js-latency-row">
                         <span>Latencia</span>
-                        <span class="js-latency">{{ $data && $data['latency_ms'] ? $data['latency_ms'].' ms' : 'Sin datos' }}</span>
+                        @php $latencyText = isset($data['latency_ms']) ? $data['latency_ms'].' ms' : 'No hay datos'; @endphp
+                        <span class="js-latency">{{ $latencyText }}</span>
                     </div>
                     <div class="metric-row js-ram-row">
                         <span>RAM</span>
-                        <span class="js-ram">
-                            @if ($ssh && $ssh['connected'] && $ssh['ram'])
-                                {{ $ssh['ram']['used_mb'] }} / {{ $ssh['ram']['total_mb'] }} MB
-                                ({{ $ssh['ram']['usage_percent'] }}%)
-                            @else
-                                {{ $ssh && $ssh['connected'] ? 'Sin datos' : 'Sin SSH' }}
-                            @endif
-                        </span>
+                        @php
+                            $ramText = ($ssh && $ssh['connected'] && $ssh['ram'])
+                                ? sprintf('%s / %s MB (%s%%)', $ssh['ram']['used_mb'], $ssh['ram']['total_mb'], $ssh['ram']['usage_percent'])
+                                : 'No hay datos';
+                        @endphp
+                        <span class="js-ram">{{ $ramText }}</span>
                     </div>
                     <div class="metric-row js-cpu-row">
                         <span>CPU (load)</span>
-                        <span class="js-cpu">
-                            @if ($ssh && $ssh['connected'] && $ssh['cpu'])
-                                {{ $ssh['cpu']['load1'] }}, {{ $ssh['cpu']['load5'] }}, {{ $ssh['cpu']['load15'] }}
-                            @else
-                                {{ $ssh && $ssh['connected'] ? 'Sin datos' : 'Sin SSH' }}
-                            @endif
-                        </span>
+                        @php
+                            $cpuText = ($ssh && $ssh['connected'] && $ssh['cpu'])
+                                ? sprintf('%s, %s, %s', $ssh['cpu']['load1'], $ssh['cpu']['load5'], $ssh['cpu']['load15'])
+                                : 'No hay datos';
+                        @endphp
+                        <span class="js-cpu">{{ $cpuText }}</span>
                     </div>
                     <div class="ssh-status js-ssh-error">
                         @if ($ssh && $ssh['error'] && ! $ssh['connected'])
@@ -277,7 +280,7 @@
                                     </span>
                                 @endforeach
                             @else
-                                <span class="muted" style="font-size: 0.8rem;">Sin datos</span>
+                                <span class="muted" style="font-size: 0.8rem;">No hay datos</span>
                             @endif
                         </div>
                     </div>
@@ -382,19 +385,22 @@
                 card.classList.toggle('status-maintenance', result.status === 'maintenance');
                 card.dataset.currentStatus = result.status;
                 card.dataset.maintenance = result.status === 'maintenance' ? '1' : '0';
-                card.querySelector('.js-latency').textContent = result.latency_ms ? `${result.latency_ms} ms` : 'Sin datos';
+                const latencyText = typeof result.latency_ms === 'number'
+                    ? `${result.latency_ms} ms`
+                    : 'No hay datos';
+                card.querySelector('.js-latency').textContent = latencyText;
 
                 if (result.ssh && result.ssh.connected && result.ssh.ram) {
-                    card.querySelector('.js-ram').textContent = `${result.ssh.ram.used_mb} / ${result.ssh.ram.total_mb} MB (${result.ssh.ram.usage_percent}%)`;
+                    const ram = result.ssh.ram;
+                    card.querySelector('.js-ram').textContent = `${ram.used_mb} / ${ram.total_mb} MB (${ram.usage_percent}%)`;
                 } else {
-                    card.querySelector('.js-ram').textContent = result.ssh && result.ssh.connected ? 'Sin datos' : 'Sin SSH';
+                    card.querySelector('.js-ram').textContent = 'No hay datos';
                 }
 
-                if (result.ssh && result.ssh.connected && result.ssh.cpu) {
-                    card.querySelector('.js-cpu').textContent = `${result.ssh.cpu.load1}, ${result.ssh.cpu.load5}, ${result.ssh.cpu.load15}`;
-                } else {
-                    card.querySelector('.js-cpu').textContent = result.ssh && result.ssh.connected ? 'Sin datos' : 'Sin SSH';
-                }
+                const cpuText = (result.ssh && result.ssh.connected && result.ssh.cpu)
+                    ? `${result.ssh.cpu.load1}, ${result.ssh.cpu.load5}, ${result.ssh.cpu.load15}`
+                    : 'No hay datos';
+                card.querySelector('.js-cpu').textContent = cpuText;
 
                 const errorBox = card.querySelector('.js-ssh-error');
                 if (result.ssh && result.ssh.error && !result.ssh.connected) {

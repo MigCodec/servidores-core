@@ -23,5 +23,17 @@
             @csrf
             <button class="btn btn-primary" type="submit">Generar / renovar refresh token</button>
         </form>
+
+        <hr style="margin: 2rem 0;">
+
+        <h3>Sincronizar base maestra</h3>
+        <p class="muted">
+            Ejecuta la misma acción que el comando <code>php artisan db:sync-drive</code>: descargará el archivo maestro,
+            importará los registros faltantes al SQLite local y volverá a subirlo a Drive.
+        </p>
+        <form method="POST" action="{{ route('admin.google-drive.sync') }}">
+            @csrf
+            <button class="btn btn-secondary" type="submit">Sincronizar ahora</button>
+        </form>
     </div>
 @endsection

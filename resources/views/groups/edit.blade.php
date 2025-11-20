@@ -3,7 +3,39 @@
 @section('title', 'Editar grupo')
 
 @section('content')
-    @php $isProtected = $isProtected ?? false; @endphp
+    @php
+        $isProtected = $isProtected ?? false;
+        $selectedUsers = old('user_ids', $group->users->pluck('id')->all());
+        $selectedServers = old('server_ids', $group->servers->pluck('id')->all());
+    @endphp
+
+    @once
+        @push('styles')
+            <style>
+                .checklist-grid {
+                    display: grid;
+                    gap: 0.5rem;
+                    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                }
+
+                .checklist-item {
+                    display: flex;
+                    gap: 0.45rem;
+                    align-items: center;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 10px;
+                    padding: 0.45rem 0.6rem;
+                    background: #fff;
+                }
+
+                .checklist-item input[type='checkbox'] {
+                    width: 16px;
+                    height: 16px;
+                }
+            </style>
+        @endpush
+    @endonce
+
     <div class="card">
         <h2 class="section-title">Configurar grupo</h2>
 
@@ -39,26 +71,43 @@
             </div>
 
             <div style="margin-top: 1.5rem;">
-                <label for="user_ids">Usuarios</label>
-                <select name="user_ids[]" id="user_ids" multiple size="6">
-                    @foreach ($users as $user)
-                        <option value="{{ $user->id }}" @selected(in_array($user->id, old('user_ids', $group->users->pluck('id')->all())))>{{ $user->name }} ({{ $user->email }})</option>
-                    @endforeach
-                </select>
-                <div class="muted">Selecciona quienes pertenecen a este grupo.</div>
+                <label>Usuarios</label>
+                @if ($users->isEmpty())
+                    <p class="muted">No hay usuarios disponibles.</p>
+                @else
+                    <div class="checklist-grid">
+                        @foreach ($users as $user)
+                            <label class="checklist-item">
+                                <input type="checkbox" name="user_ids[]" value="{{ $user->id }}" {{ in_array($user->id, $selectedUsers) ? 'checked' : '' }}>
+                                <span>{{ $user->name }} ({{ $user->email }})</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div class="muted">
+                        Selecciona quienes pertenecen a este grupo.
+                        @if ($group->is_admin)
+                            No te quites del grupo administrador o perderás acceso a esta sección.
+                        @endif
+                    </div>
+                @endif
             </div>
 
             @if (! $group->is_admin)
                 <div style="margin-top: 1.5rem;">
-                    <label for="server_ids">Servidores asignados</label>
-                    <select name="server_ids[]" id="server_ids" multiple size="8">
-                        @foreach ($servers as $serverOption)
-                            <option value="{{ $serverOption->id }}" @selected(in_array($serverOption->id, old('server_ids', $group->servers->pluck('id')->all())))>
-                                {{ $serverOption->name }} ({{ $serverOption->ip_address }})
-                            </option>
-                        @endforeach
-                    </select>
-                    <div class="muted">Los ayudantes veran y modificaran solo los servidores seleccionados.</div>
+                    <label>Servidores asignados</label>
+                    @if ($servers->isEmpty())
+                        <p class="muted">No hay servidores registrados.</p>
+                    @else
+                        <div class="checklist-grid">
+                            @foreach ($servers as $serverOption)
+                                <label class="checklist-item">
+                                    <input type="checkbox" name="server_ids[]" value="{{ $serverOption->id }}" {{ in_array($serverOption->id, $selectedServers) ? 'checked' : '' }}>
+                                    <span>{{ $serverOption->name }} ({{ $serverOption->ip_address }})</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <div class="muted">Los ayudantes verán y modificarán solo los servidores seleccionados.</div>
+                    @endif
                 </div>
             @endif
 

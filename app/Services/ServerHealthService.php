@@ -42,8 +42,9 @@ class ServerHealthService
         $ping = $this->ping($server->ip_address);
 
         $ssh = null;
-        if ($server->ssh_username) {
-            $ssh = $this->fetchSshMetrics($server);
+        $sshService = $server->sshService;
+        if ($sshService) {
+            $ssh = $this->fetchSshMetrics($server, $sshService);
         }
 
         $result = [
@@ -87,8 +88,9 @@ class ServerHealthService
         }
 
         $latency = null;
-        if (preg_match('/time[=<]([\d\.]+)/i', $process->getOutput(), $matches)) {
-            $latency = (float) $matches[1];
+        if (preg_match('/(?:time|tiempo)[=<]([\d\.,]+)/i', $process->getOutput(), $matches)) {
+            $value = str_replace(',', '.', $matches[1]);
+            $latency = (float) $value;
         }
 
         return [
@@ -97,10 +99,10 @@ class ServerHealthService
         ];
     }
 
-    protected function fetchSshMetrics(Server $server): array
+    protected function fetchSshMetrics(Server $server, $sshService): array
     {
-        $host = $server->ssh_host ?: $server->ip_address;
-        $port = $server->ssh_port ?: 22;
+        $host = $sshService->host ?: $server->ip_address;
+        $port = $sshService->port ?: 22;
 
         $result = [
             'connected' => false,
@@ -109,14 +111,14 @@ class ServerHealthService
             'cpu' => null,
         ];
 
-        if (! $host || ! $server->ssh_username) {
+        if (! $host || ! $sshService->username) {
             return $result;
         }
 
         try {
             $ssh = new SSH2($host, $port, 5);
 
-            $password = $server->ssh_password;
+            $password = $sshService->password;
 
             if (! $password) {
                 $result['error'] = 'Sin contraseña SSH configurada.';
@@ -124,14 +126,18 @@ class ServerHealthService
                 return $result;
             }
 
-            if (! $ssh->login($server->ssh_username, $password)) {
+            if (! $ssh->login($sshService->username, $password)) {
                 $result['error'] = 'No se pudo autenticar vía SSH.';
 
                 return $result;
             }
 
+            $ramCommand = <<<'CMD'
+LANG=C free -m | awk 'NR==2 {print $2 " " $3}'
+CMD;
+
             $result['connected'] = true;
-            $result['ram'] = $this->parseRamUsage($ssh->exec("LANG=C free -m | awk 'NR==2 {print \$2 \" \" \$3}'"));
+            $result['ram'] = $this->parseRamUsage($ssh->exec($ramCommand));
             $result['cpu'] = $this->parseCpuLoad($ssh->exec('LANG=C uptime'));
             $result['services'] = $this->checkCriticalServices($server, $ssh);
         } catch (\Throwable $e) {

@@ -31,4 +31,9 @@ class ServerPolicy
     {
         return $user->isAdmin();
     }
+
+    public function viewCredentials(User $user, Server $server): bool
+    {
+        return $user->canAccessServerCredentials($server);
+    }
 }

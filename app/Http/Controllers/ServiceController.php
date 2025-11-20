@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Server;
 use App\Models\Service;
+use App\Models\ServicePasswordLog;
 use Illuminate\Http\Request;
 
 class ServiceController extends Controller
@@ -23,7 +24,11 @@ class ServiceController extends Controller
 
         $data = $this->validateService($request);
 
-        $server->services()->create($data);
+        $service = $server->services()->create($data);
+
+        if (! empty($data['password'] ?? null)) {
+            $this->logServicePassword($service, $data['password'], $request->user());
+        }
 
         return redirect()
             ->route('servers.show', $server)
@@ -47,11 +52,16 @@ class ServiceController extends Controller
 
         $data = $this->validateService($request, false);
 
+        $newPassword = $data['password'] ?? null;
         if (! isset($data['password']) || $data['password'] === null || $data['password'] === '') {
             unset($data['password']);
         }
 
         $service->update($data);
+
+        if (! empty($newPassword)) {
+            $this->logServicePassword($service, $newPassword, $request->user());
+        }
 
         return redirect()
             ->route('servers.show', $service->server)
@@ -80,5 +90,18 @@ class ServiceController extends Controller
         ];
 
         return $request->validate($rules);
+    }
+
+    protected function logServicePassword(Service $service, string $password, $user = null): void
+    {
+        if ($password === '') {
+            return;
+        }
+
+        ServicePasswordLog::create([
+            'service_id' => $service->id,
+            'password' => $password,
+            'recorded_by' => $user?->id,
+        ]);
     }
 }

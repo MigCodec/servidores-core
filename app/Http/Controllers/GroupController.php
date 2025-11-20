@@ -56,7 +56,12 @@ class GroupController extends Controller
         $group->is_admin = $request->boolean('is_admin');
         $group->save();
 
-        $group->users()->sync($data['user_ids'] ?? []);
+        $userIds = collect($data['user_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->all();
+        if ($group->is_admin && ! in_array($request->user()->id, $userIds)) {
+            $userIds[] = $request->user()->id;
+        }
+
+        $group->users()->sync($userIds);
 
         if ($group->is_admin) {
             $group->servers()->sync([]);
@@ -113,7 +118,23 @@ class GroupController extends Controller
 
         $group->save();
 
-        $group->users()->sync($data['user_ids'] ?? []);
+        $userIds = collect($data['user_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->all();
+
+        if ($group->is_admin) {
+            $currentUser = $request->user();
+            $hasOtherAdminGroup = $currentUser->groups()
+                ->where('is_admin', true)
+                ->where('groups.id', '!=', $group->id)
+                ->exists();
+
+            if (! in_array($currentUser->id, $userIds) && ! $hasOtherAdminGroup) {
+                return back()
+                    ->withErrors(['user_ids' => 'Debes permanecer en al menos un grupo de administradores.'])
+                    ->withInput();
+            }
+        }
+
+        $group->users()->sync($userIds);
 
         if ($group->is_admin) {
             $group->servers()->sync([]);
