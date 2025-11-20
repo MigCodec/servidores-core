@@ -15,11 +15,19 @@ class OAuthCredentials
             throw new RuntimeException('Provide GOOGLE_DRIVE_CREDENTIALS with the OAuth client JSON or file path.');
         }
 
-        if (is_string($credentials) && File::exists($credentials)) {
-            $credentials = File::get($credentials);
-        }
-
         if (is_string($credentials)) {
+            $pathCandidates = [
+                $credentials,
+                base_path($credentials),
+            ];
+
+            foreach ($pathCandidates as $path) {
+                if (File::exists($path)) {
+                    $credentials = File::get($path);
+                    break;
+                }
+            }
+
             $decoded = json_decode($credentials, true);
             if (json_last_error() !== JSON_ERROR_NONE) {
                 $base64 = base64_decode($credentials, true);
