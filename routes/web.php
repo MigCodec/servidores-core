@@ -29,6 +29,8 @@ Route::middleware('auth')->group(function () {
     Route::post('admin/google-drive/connect', [GoogleDriveController::class, 'start'])->name('admin.google-drive.start');
     Route::get('admin/google-drive/callback', [GoogleDriveController::class, 'callback'])->name('admin.google-drive.callback');
     Route::post('admin/google-drive/sync', [GoogleDriveController::class, 'sync'])->name('admin.google-drive.sync');
+    Route::post('admin/google-drive/backup', [GoogleDriveController::class, 'backup'])->name('admin.google-drive.backup');
+    Route::post('admin/google-drive/restore', [GoogleDriveController::class, 'restore'])->name('admin.google-drive.restore');
 
     Route::resource('servers', ServerController::class);
     Route::post('servers/{server}/vault', [ServerController::class, 'storeVaultEntry'])->name('servers.vault.store');

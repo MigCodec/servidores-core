@@ -32,6 +32,74 @@ class SqliteDatabaseBackup
         ];
     }
 
+    public function listBackups(int $limit = 20): array
+    {
+        $drive = DriveClientFactory::make('SQLite Backup List');
+
+        $query = "mimeType = 'application/x-sqlite3' and trashed = false";
+
+        if ($folderId = config('services.google_drive.folder_id')) {
+            $query .= sprintf(" and '%s' in parents", $folderId);
+        }
+
+        $files = $drive->files->listFiles([
+            'q' => $query,
+            'orderBy' => 'modifiedTime desc',
+            'pageSize' => $limit,
+            'fields' => 'files(id, name, modifiedTime, createdTime, size)',
+            'supportsAllDrives' => true,
+            'includeItemsFromAllDrives' => true,
+        ]);
+
+        return array_map(function (DriveFile $file) {
+            return [
+                'id' => $file->getId(),
+                'name' => $file->getName(),
+                'modifiedTime' => $file->getModifiedTime(),
+                'createdTime' => $file->getCreatedTime(),
+                'size' => $file->getSize(),
+            ];
+        }, $files->getFiles() ?? []);
+    }
+
+    public function restoreFromDrive(string $fileId): array
+    {
+        $drive = DriveClientFactory::make('SQLite Restore');
+        $metadata = $drive->files->get($fileId, [
+            'fields' => 'id, name',
+            'supportsAllDrives' => true,
+        ]);
+
+        $tempPath = storage_path('app/backups/restore-'.$fileId.'.sqlite');
+        File::ensureDirectoryExists(dirname($tempPath));
+
+        $previousBackup = null;
+
+        try {
+            $response = $drive->files->get($fileId, [
+                'alt' => 'media',
+                'supportsAllDrives' => true,
+            ]);
+
+            File::put($tempPath, $response->getBody()->getContents());
+
+            $databasePath = $this->databasePath();
+            $previousBackup = $this->createSnapshot($databasePath);
+
+            if (! File::copy($tempPath, $databasePath)) {
+                throw new RuntimeException('No se pudo sobrescribir la base de datos local.');
+            }
+        } finally {
+            File::delete($tempPath);
+        }
+
+        return [
+            'file_id' => $metadata->getId(),
+            'file_name' => $metadata->getName(),
+            'local_backup' => $previousBackup ? basename($previousBackup) : null,
+        ];
+    }
+
     protected function databasePath(): string
     {
         $path = config('database.connections.sqlite.database');

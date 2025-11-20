@@ -24,6 +24,50 @@ Artisan::command('db:backup-drive', function () {
     ));
 })->purpose('Create a copy of the SQLite database and upload it to Google Drive');
 
+Artisan::command('db:restore-drive {fileId?}', function (?string $fileId = null) {
+    /** @var \App\Support\Database\SqliteDatabaseBackup $backup */
+    $backup = app(SqliteDatabaseBackup::class);
+
+    if (! $fileId) {
+        $files = $backup->listBackups(10);
+
+        if ($files === []) {
+            $this->error('No backup files were found in Google Drive.');
+
+            return self::FAILURE;
+        }
+
+        $this->info('Available backups:');
+        foreach ($files as $index => $file) {
+            $this->line(sprintf(
+                '[%d] %s (%s)',
+                $index + 1,
+                $file['name'],
+                $file['id']
+            ));
+        }
+
+        $choice = (int) $this->ask('Select the backup number to restore');
+
+        if ($choice < 1 || $choice > count($files)) {
+            $this->error('Invalid selection.');
+
+            return self::FAILURE;
+        }
+
+        $fileId = $files[$choice - 1]['id'];
+    }
+
+    $result = $backup->restoreFromDrive($fileId);
+
+    $this->info(sprintf(
+        'Database restored from %s (ID: %s). Local copy stored as %s.',
+        $result['file_name'],
+        $result['file_id'],
+        $result['local_backup'] ?? 'N/A'
+    ));
+})->purpose('Restore the SQLite database from a Google Drive backup');
+
 Artisan::command('db:sync-drive', function () {
     /** @var \App\Support\Database\SqliteDriveSynchronizer $synchronizer */
     $synchronizer = app(SqliteDriveSynchronizer::class);
