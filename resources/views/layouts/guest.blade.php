@@ -12,8 +12,16 @@
             color: #fff;
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
+        }
+
+        .auth-wrapper {
+            flex: 1;
+            display: flex;
             align-items: center;
             justify-content: center;
+            width: 100%;
+            padding: 2rem 1rem;
         }
 
         .login-card {
@@ -92,13 +100,37 @@
             color: #cbd5f5;
             margin-top: 1rem;
         }
+
+        .site-footer {
+            background: #0b1222;
+            color: #e5e7eb;
+            padding: 1rem 1.25rem;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+
+        .site-footer a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .site-footer a:hover {
+            text-decoration: underline;
+        }
     </style>
     @stack('styles')
 </head>
 <body>
-    <div class="login-card">
-        @yield('content')
+    <div class="auth-wrapper">
+        <div class="login-card">
+            @yield('content')
+        </div>
     </div>
+    <footer class="site-footer">
+        <span>Powered by</span>
+        <a href="https://www.linkedin.com/in/miguel-araya" target="_blank" rel="noopener">Miguel Araya</a>
+    </footer>
     @stack('scripts')
 </body>
 </html>

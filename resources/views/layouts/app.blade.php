@@ -246,6 +246,33 @@
             margin-bottom: 1rem;
         }
 
+        .site-footer {
+            background: #0f172a;
+            color: #e5e7eb;
+            padding: 1rem 1.5rem;
+        }
+
+        .site-footer .footer-content {
+            max-width: 1100px;
+            margin: 0 auto;
+            text-align: center;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .site-footer a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .site-footer a:hover {
+            text-decoration: underline;
+        }
+
         @media (max-width: 640px) {
             .nav-wrapper {
                 flex-direction: column;
@@ -342,6 +369,12 @@
     <main>
         @yield('content')
     </main>
+    <footer class="site-footer">
+        <div class="footer-content">
+            <span>Powered by</span>
+            <a href="https://www.linkedin.com/in/miguel-angel-araya-cort%C3%A9s-a56815203/" target="_blank" rel="noopener">Miguel Araya</a>
+        </div>
+    </footer>
     @stack('scripts')
     <script>
         (function () {
