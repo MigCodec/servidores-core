@@ -321,6 +321,52 @@
             border-left: 4px solid #2563eb;
         }
 
+        /* Pagination */
+        .pagination {
+            list-style: none;
+            display: inline-flex;
+            gap: 0.4rem;
+            padding: 0;
+            margin: 0;
+        }
+
+        .pagination li a,
+        .pagination li span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 38px;
+            padding: 0.45rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            color: #111827;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .pagination li a:hover {
+            background: #f3f4f6;
+        }
+
+        .pagination .active span {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
+        }
+
+        .pagination .disabled span {
+            background: #f3f4f6;
+            color: #9ca3af;
+        }
+
+        .pagination-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
+
         @keyframes slideIn {
             from {
                 opacity: 0;

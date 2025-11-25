@@ -2,11 +2,58 @@
 
 @section('title', 'Servidor '.$server->name)
 
+@push('styles')
+    <style>
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .chart-box {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1rem;
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+
+        .chart-canvas {
+            position: relative;
+            height: 240px;
+            min-height: 240px;
+        }
+
+        .chart-canvas canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.5rem;
+        }
+
+        .chart-title {
+            font-weight: 700;
+        }
+    </style>
+@endpush
+
 @section('content')
     <div class="card">
         @php
             $canViewCredentials = auth()->user()->can('viewCredentials', $server);
             $sshService = $server->sshService;
+            $sshPassword = null;
+            try {
+                $sshPassword = optional($sshService)->password;
+            } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                $sshPassword = 'No disponible (clave inválida)';
+            }
         @endphp
         <div style="display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
             <div>
@@ -65,7 +112,7 @@
                 <label>Credenciales SSH</label>
                 <div>Host: {{ optional($sshService)->host ?? $server->ip_address ?? 'N/D' }} · Puerto: {{ optional($sshService)->port ?? 22 }}</div>
                 <div>Usuario: {{ optional($sshService)->username ?? 'N/D' }}</div>
-                <div>Contraseña: {{ optional($sshService)->password ?? 'N/D' }}</div>
+                <div>Contraseña: {{ $sshPassword ?? 'N/D' }}</div>
             </div>
         @endif
 
@@ -126,6 +173,14 @@
                     </thead>
                     <tbody>
                     @foreach ($server->services as $service)
+                        @php
+                            $servicePassword = null;
+                            try {
+                                $servicePassword = $service->password;
+                            } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                                $servicePassword = 'No disponible (clave inválida)';
+                            }
+                        @endphp
                         <tr>
                             <td>{{ $service->name }}</td>
                             <td>
@@ -139,7 +194,7 @@
                         <td>{{ $service->username }}</td>
                         <td>
                             @if ($canViewCredentials)
-                                {{ $service->password ?? 'N/D' }}
+                                {{ $servicePassword ?? 'N/D' }}
                             @else
                                 <span class="muted">Sin acceso</span>
                             @endif
@@ -168,10 +223,45 @@
         <h3 class="section-title">Historial de disponibilidad</h3>
         @php
             $logs = $server->healthLogs ?? collect();
+            $orderedLogs = $logs->sortBy('created_at');
+            $chartLabels = $orderedLogs->map(fn($log) => $log->created_at->format('d M H:i'))->values();
+            $cpuSeries = $orderedLogs->map(fn($log) => $log->cpu_load1 !== null ? (float) $log->cpu_load1 : null)->values();
+            $ramSeries = $orderedLogs->map(fn($log) => $log->ram_usage_percent !== null ? (float) $log->ram_usage_percent : null)->values();
+            $latencySeries = $orderedLogs->map(fn($log) => $log->latency_ms !== null ? (float) $log->latency_ms : null)->values();
+            $statusColors = $orderedLogs->map(fn($log) => $log->status === 'up' ? '#16a34a' : '#dc2626')->values();
         @endphp
         @if ($logs->isEmpty())
             <p class="muted">No hay registros recientes.</p>
         @else
+            <div class="chart-grid">
+                <div class="chart-box">
+                    <div class="chart-header">
+                        <span class="chart-title">Uso de CPU</span>
+                        <span class="muted">load1</span>
+                    </div>
+                    <div class="chart-canvas">
+                        <canvas id="cpuChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-header">
+                        <span class="chart-title">Uso de RAM</span>
+                        <span class="muted">%</span>
+                    </div>
+                    <div class="chart-canvas">
+                        <canvas id="ramChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-header">
+                        <span class="chart-title">Latencia</span>
+                        <span class="muted">ms</span>
+                    </div>
+                    <div class="chart-canvas">
+                        <canvas id="latencyChart"></canvas>
+                    </div>
+                </div>
+            </div>
             <div class="table-wrapper">
                 <table class="table">
                     <thead>
@@ -294,9 +384,17 @@
                 <div>
                     <h4>SSH</h4>
                     @forelse ($server->passwordLogs as $log)
+                        @php
+                            $logPassword = null;
+                            try {
+                                $logPassword = $log->password;
+                            } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                                $logPassword = 'No disponible (clave inválida)';
+                            }
+                        @endphp
                         <div style="margin-bottom:0.35rem;">
                             <strong>{{ $log->created_at->toDayDateTimeString() }}</strong>
-                            <div>Contraseña: {{ $log->password ?? 'N/D' }}</div>
+                            <div>Contraseña: {{ $logPassword ?? 'N/D' }}</div>
                             <div class="muted">Registrado por {{ optional($log->recordedBy)->name ?? 'sistema' }}</div>
                         </div>
                     @empty
@@ -309,8 +407,16 @@
                         <div style="margin-bottom:0.75rem;">
                             <strong>{{ $service->name }}</strong>
                             @forelse ($service->passwordLogs->take(5) as $log)
+                                @php
+                                    $serviceLogPassword = null;
+                                    try {
+                                        $serviceLogPassword = $log->password;
+                                    } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+                                        $serviceLogPassword = 'No disponible (clave inválida)';
+                                    }
+                                @endphp
                                 <div style="font-size:0.9rem;">
-                                    {{ $log->created_at->toDayDateTimeString() }} — {{ $log->password ?? 'N/D' }}
+                                    {{ $log->created_at->toDayDateTimeString() }} — {{ $serviceLogPassword ?? 'N/D' }}
                                 </div>
                             @empty
                                 <div class="muted">Sin registros.</div>
@@ -323,3 +429,80 @@
     @endif
 @endsection
 
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof Chart === 'undefined') return;
+
+            const labels = @json($chartLabels);
+            if (!labels.length) return;
+
+            const statusColors = @json($statusColors);
+
+            function createChart(canvasId, seriesLabel, color, data) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                gradient.addColorStop(0, `${color}55`);
+                gradient.addColorStop(1, `${color}05`);
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: seriesLabel,
+                            data,
+                            borderColor: color,
+                            backgroundColor: gradient,
+                            fill: true,
+                            borderWidth: 2,
+                            tension: 0.35,
+                            spanGaps: true,
+                            pointRadius: 4.5,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: statusColors,
+                            pointBorderColor: '#0b1727',
+                            pointBorderWidth: 1.2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#4b5563', maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(15, 23, 42, 0.06)' },
+                                ticks: { color: '#4b5563' }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#0f172a',
+                                borderColor: '#1e293b',
+                                borderWidth: 1,
+                                titleColor: '#e2e8f0',
+                                bodyColor: '#e2e8f0',
+                                callbacks: {
+                                    label: (ctx) => `${seriesLabel}: ${ctx.parsed.y ?? 'N/D'}`
+                                }
+                            }
+                        },
+                        interaction: { mode: 'index', intersect: false }
+                    }
+                });
+            }
+
+            createChart('cpuChart', 'CPU (load1)', '#2563eb', @json($cpuSeries));
+            createChart('ramChart', 'RAM (%)', '#16a34a', @json($ramSeries));
+            createChart('latencyChart', 'Latencia (ms)', '#f59e0b', @json($latencySeries));
+        });
+    </script>
+@endpush
