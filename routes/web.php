@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServerController;
+use App\Http\Controllers\ServerTerminalController;
 use App\Http\Controllers\ServiceController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +34,12 @@ Route::middleware('auth')->group(function () {
     Route::post('admin/google-drive/restore', [GoogleDriveController::class, 'restore'])->name('admin.google-drive.restore');
 
     Route::resource('servers', ServerController::class);
+    Route::post('servers/{server}/terminal/sessions', [ServerTerminalController::class, 'store'])
+        ->name('servers.terminal.sessions.store');
+    Route::delete('servers/{server}/terminal/sessions/{sessionId}', [ServerTerminalController::class, 'destroy'])
+        ->name('servers.terminal.sessions.destroy');
+    Route::get('servers/{server}/terminal', [ServerTerminalController::class, 'view'])
+        ->name('servers.terminal.view');
     Route::post('servers/{server}/vault', [ServerController::class, 'storeVaultEntry'])->name('servers.vault.store');
     Route::resource('servers.services', ServiceController::class)
         ->shallow()

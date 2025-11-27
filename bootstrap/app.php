@@ -2,6 +2,9 @@
 
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\RedirectIfAuthenticated;
+use App\Console\Commands\TerminalSupervisorConfig;
+use App\Console\Commands\TerminalWebSocket;
+use App\Console\Commands\TerminalCleanupKeys;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,4 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->withCommands([
+        TerminalWebSocket::class,
+        TerminalSupervisorConfig::class,
+        TerminalCleanupKeys::class,
+    ])
+    ->create();
