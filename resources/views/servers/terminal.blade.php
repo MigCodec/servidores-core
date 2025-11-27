@@ -53,7 +53,7 @@
          id="ssh-terminal-card"
          data-cleanup-url="{{ route('servers.terminal.sessions.destroy', [$server, '__SESSION__']) }}"
          data-ws-port="{{ env('WS_PORT', 7001) }}"
-         data-ws-url="{{ config('app.websocket_url') ?? env('WS_URL') }}"
+         data-ws-url="{{ config('app.websocket_url') ?? env('WS_FRONT_URL') }}"
          data-session-id="{{ session()->getId() }}"
          data-session-cookie="{{ e($sessionCookieRaw) }}">
         <div>
