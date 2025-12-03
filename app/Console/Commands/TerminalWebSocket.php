@@ -24,6 +24,13 @@ class TerminalWebSocket extends Command
         $this->logFile = storage_path('logs/terminal-ws.log');
         $port = (int) $this->option('port');
 
+        // Ajustes de Workerman para evitar conflictos con argumentos artisan y permisos de logs/PID
+        global $argv;
+        $argv = [$argv[0]]; // evita que Workerman interprete "terminal:ws" como comando propio
+        Worker::$logFile = storage_path('logs/workerman.log');
+        Worker::$pidFile = storage_path('logs/workerman.pid');
+        Worker::$stdoutFile = storage_path('logs/terminal-ws.stdout.log');
+
         $ws = new Worker("websocket://127.0.0.1:{$port}");
         $ws->count = 1;
 
